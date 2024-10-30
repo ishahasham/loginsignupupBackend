@@ -1,7 +1,9 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const cors = require("cors");
+import express from "express";
+import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+import cors from "cors";
+import userModel from "./userSchema.js";
+
 const app = express();
 const PORT = 5010;
 
@@ -9,42 +11,94 @@ const PORT = 5010;
 app.use(cors());
 app.use(express.json());
 
-// Temporary in-memory storage for demonstration purposes
-const users = [];
+// MongoDB uri
+const DBURI = "mongodb+srv://ishahasham:isha123@cluster0.r67vq.mongodb.net/yourDatabaseName";
 
-// Secret key for JWT
-const JWT_SECRET = "your_secret_key_here";
+// Connect to MongoDB
+mongoose.connect(DBURI);
+
+
+mongoose.connection.on("connected", () => console.log("MongoDB connected"));
+mongoose.connection.on("error", (err) => console.log("MongoDB connection error:", err));
+
 
 // Signup route
 app.post("/signup", async (req, res) => {
     const { name, username, password } = req.body;
-    
-    // Check if username already exists
-    const existingUser = users.find((u) => u.username === username);
-    if (existingUser) {
-        return res.status(400).json({ error: "Username already exists" });
+
+    if (!name || !username || !password) {
+        res.json({
+            message: "Required fields are missing",
+            status: false,
+        });
+        return;
     }
 
-    // Hash password before storing it
+    // Check if username already exists //use can use this for email 
+    const existingUser = await userModel.findOne({ username });
+    if (existingUser) {
+        res.json({
+            message: "Username already exists",
+            status: false,
+        });
+        return ;
+    }
+
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Store the new user with name, username, and hashed password
-    users.push({ name, username, password: hashedPassword });
-    res.json({ message: "User registered successfully" });
+    console.log("hashpassword", hashedPassword)
+
+    // Create the user in the db
+    const createuser = await userModel.create({
+        name,
+        username,
+        password: hashedPassword,
+    });
+
+    res.json({
+        message: "User created successfully",
+        status: true,
+        data: createuser,
+    });
 });
 
 // Login route
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
-    const user = users.find((u) => u.username === username);
-    
-    if (user && (await bcrypt.compare(password, user.password))) {
-        // Generate a JWT token
-        const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: "1h" });
-        res.json({ token });
-    } else {
-        res.status(401).json({ error: "Invalid username or password" });
+
+    if (!username || !password) {
+        res.json({
+            message: "Required fields are missing",
+            status: false,
+        });
+        return;
     }
+
+    // Check if user exists
+    const user = await userModel.findOne({ username });
+    if (!user) {
+        res.json({
+            message: "Invalid username or password",
+            status: false,
+        });
+        return;
+    }
+
+    // Compare the password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+        res.json({
+            message: "Invalid username or password",
+            status: false,
+        });
+        return;
+    }
+
+    // Login successful
+    res.json({
+        message: "Login successful",
+        status: true,
+    });
 });
 
 // Start server

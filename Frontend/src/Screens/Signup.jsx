@@ -12,15 +12,20 @@ function Signup() {
     const handleSignup = async () => {
         try {
             const response = await axios.post("http://localhost:5010/signup", { name, username, password });
-            alert(response.data.message);
-            navigate("/login");  // Redirect to login page
+
+            if (response.data.status) {
+                alert(response.data.message);
+                navigate("/login");  
+            } else {
+                alert(response.data.message); 
+            }
         } catch (error) {
-            alert("Error registering user");
+            alert("An error occurred. Please try again.");
         }
     };
 
     return (
-        <Container maxWidth="sm" style={{marginTop:"50px"}}>
+        <Container maxWidth="sm" style={{ marginTop: "50px" }}>
             <Paper elevation={3} style={{ padding: "2rem" }}>
                 <Typography variant="h4" component="h1" align="center" gutterBottom>Signup</Typography>
                 <TextField

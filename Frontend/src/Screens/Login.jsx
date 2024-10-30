@@ -11,16 +11,20 @@ function Login() {
     const handleLogin = async () => {
         try {
             const response = await axios.post("http://localhost:5010/login", { username, password });
-            alert("Login successful!");
-            localStorage.setItem("token", response.data.token); // Save token
-            navigate("/dashboard"); // Redirect to dashboard or home page after login
+            
+            if (response.data.status) {
+                alert("Login successful!");
+                navigate("/dashboard");  
+            } else {
+                alert(response.data.message); 
+            }
         } catch (error) {
-            alert("Invalid credentials");
+            alert("An error occurred. Please try again.");
         }
     };
 
     return (
-        <Container maxWidth="sm" style={{marginTop:"50px"}}>
+        <Container maxWidth="sm" style={{ marginTop: "50px" }}>
             <Paper elevation={3} style={{ padding: "2rem" }}>
                 <Typography variant="h4" component="h1" align="center" gutterBottom>Login</Typography>
                 <TextField
